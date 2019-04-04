@@ -413,6 +413,17 @@ pub use types::{
     RedisError,
     RedisFuture,
     RedisResult,
+    // stream types
+    StreamClaimOptions,
+    StreamInfoConsumersReply,
+    StreamInfoGroupsReply,
+    StreamInfoStreamsReply,
+    StreamMaxlen,
+    StreamPendingCountReply,
+    StreamPendingReply,
+    StreamRangeReply,
+    StreamReadOptions,
+    StreamReadReply,
     ToRedisArgs,
 
     // low level values

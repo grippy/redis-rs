@@ -1,6 +1,14 @@
 // can't use rustfmt here because it screws up the file.
 #![cfg_attr(rustfmt, rustfmt_skip)]
-use types::{FromRedisValue, ToRedisArgs, RedisResult, NumericBehavior};
+use types::{
+    FromRedisValue,
+    ToRedisArgs,
+    RedisResult,
+    NumericBehavior,
+    StreamMaxlen,
+    StreamClaimOptions,
+    StreamReadOptions
+};
 use connection::{ConnectionLike, Msg, Connection};
 use cmd::{cmd, Cmd, Pipeline, Iter};
 
@@ -532,6 +540,186 @@ implement_commands! {
     /// Add multiple sets and store the resulting set in a key.
     fn sunionstore<K: ToRedisArgs>(dstkey: K, keys: K) {
         cmd("SUNIONSTORE").arg(dstkey).arg(keys)
+    }
+
+    /// stream commands
+    /// XACK <key> <group> <id> <id> ... <id>
+    fn xack<K: ToRedisArgs, G: ToRedisArgs, ID: ToRedisArgs>(key: K, group: G, ids: &[ID]) {
+        cmd("XACK").arg(key).arg(group).arg(ids)
+    }
+
+    /// XADD key <ID or *> [field value] [field value] ...
+    fn xadd<K: ToRedisArgs, ID: ToRedisArgs, F: ToRedisArgs, V: ToRedisArgs>(
+        key: K, id: ID, items: &[(F, V)]) {
+        cmd("XADD").arg(key).arg(id).arg(items)
+    }
+
+    /// XADD key <ID or *> [rust HashMap] ...
+    fn xadd_map<K: ToRedisArgs, ID: ToRedisArgs, HM: ToRedisArgs>(
+        key: K, id: ID, map: HM) {
+        cmd("XADD").arg(key).arg(id).arg(map)
+    }
+
+    /// XADD key [MAXLEN [~|=] <count>] <ID or *> [field value] [field value] ...
+    fn xadd_maxlen<K: ToRedisArgs, ID: ToRedisArgs, F: ToRedisArgs, V: ToRedisArgs>(
+        key: K, maxlen: StreamMaxlen, id: ID, items: &[(F, V)]) {
+        cmd("XADD").arg(key).arg(maxlen).arg(id).arg(items)
+    }
+
+    /// XCLAIM <key> <group> <consumer> <min-idle-time> <ID-1> <ID-2>
+    fn xclaim<K: ToRedisArgs, G: ToRedisArgs, C: ToRedisArgs, MIT: ToRedisArgs, ID: ToRedisArgs>(
+        key: K, group: G, consumer: C, min_idle_time: MIT, ids: &[ID]) {
+        cmd("XCLAIM")
+            .arg(key)
+            .arg(group)
+            .arg(consumer)
+            .arg(min_idle_time)
+            .arg(ids)
+    }
+
+    /// XCLAIM <key> <group> <consumer> <min-idle-time> <ID-1> <ID-2>
+    ///     [IDLE <milliseconds>] [TIME <mstime>] [RETRYCOUNT <count>]
+    ///     [FORCE] [JUSTID]
+    fn xclaim_options<K: ToRedisArgs, G: ToRedisArgs, C: ToRedisArgs, MIT: ToRedisArgs, ID: ToRedisArgs>(
+        key: K, group: G, consumer: C, min_idle_time: MIT, ids: &[ID], options: StreamClaimOptions) {
+        cmd("XCLAIM")
+            .arg(key)
+            .arg(group)
+            .arg(consumer)
+            .arg(min_idle_time)
+            .arg(ids)
+            .arg(options)
+    }
+
+    /// XDEL <key> [<ID1> <ID2> ... <IDN>]
+    fn xdel<K: ToRedisArgs, ID: ToRedisArgs>(key: K, ids: &[ID]) {
+        cmd("XDEL").arg(key).arg(ids)
+    }
+
+    /// XGROUP CREATE <key> <groupname> <id or $>
+    fn xgroup_create<K: ToRedisArgs, G: ToRedisArgs, ID: ToRedisArgs>(key: K, group: G, id: ID) {
+        cmd("XGROUP").arg("CREATE").arg(key).arg(group).arg(id)
+    }
+
+    /// XGROUP CREATE <key> <groupname> <id or $> [MKSTREAM]
+    fn xgroup_create_mkstream<K: ToRedisArgs, G: ToRedisArgs, ID: ToRedisArgs>(key: K, group: G, id: ID) {
+        cmd("XGROUP").arg("CREATE").arg(key).arg(group).arg(id).arg("MKSTREAM")
+    }
+
+    /// XGROUP SETID <key> <groupname> <id or $>
+    fn xgroup_setid<K: ToRedisArgs, G: ToRedisArgs, ID: ToRedisArgs>(key: K, group: G, id: ID) {
+        cmd("XGROUP").arg("SETID").arg(key).arg(group).arg(id)
+    }
+
+    /// XGROUP DESTROY <key> <groupname>
+    fn xgroup_destroy<K: ToRedisArgs, G: ToRedisArgs>(key: K, group: G) {
+        cmd("XGROUP").arg("DESTROY").arg(key).arg(group)
+    }
+
+    /// XGROUP DELCONSUMER <key> <groupname> <consumername> */
+    fn xgroup_delconsumer<K: ToRedisArgs, G: ToRedisArgs, C: ToRedisArgs>(key: K, group: G, consumer: C) {
+        cmd("XGROUP").arg("DELCONSUMER").arg(key).arg(group).arg(consumer)
+    }
+
+    /// XINFO CONSUMERS <key> <group>
+    fn xinfo_consumers<K: ToRedisArgs, G: ToRedisArgs>(key: K, group: G) {
+        cmd("XINFO").arg("CONSUMERS").arg(key).arg(group)
+    }
+
+    /// XINFO GROUPS <key>
+    fn xinfo_groups<K: ToRedisArgs>(key: K) {
+        cmd("XINFO").arg("GROUPS").arg(key)
+    }
+
+    /// XINFO STREAM <key>
+    fn xinfo_stream<K: ToRedisArgs>(key: K) {
+        cmd("XINFO").arg("STREAM").arg(key)
+    }
+
+    /// XLEN <key>
+    fn xlen<K: ToRedisArgs>(key: K) {
+        cmd("XLEN").arg(key)
+    }
+
+    /// XPENDING <key> <group> [<start> <stop> <count> [<consumer>]]
+    fn xpending<K: ToRedisArgs, G: ToRedisArgs>(key: K, group: G) {
+        cmd("XPENDING").arg(key).arg(group)
+    }
+
+    /// XPENDING <key> <group> <start> <stop> <count>
+    fn xpending_count<K: ToRedisArgs, G: ToRedisArgs, S: ToRedisArgs, E: ToRedisArgs, C: ToRedisArgs>(
+        key: K, group: G, start: S, end: E, count: C
+    ) {
+        cmd("XPENDING")
+            .arg(key)
+            .arg(group)
+            .arg(start)
+            .arg(end)
+            .arg(count)
+    }
+
+    /// XPENDING <key> <group> <start> <stop> <count> <consumer>
+    fn xpending_consumer_count<K: ToRedisArgs, G: ToRedisArgs, S: ToRedisArgs, E: ToRedisArgs, C: ToRedisArgs, CN: ToRedisArgs>(
+        key: K, group: G, start: S, end: E, count: C, consumer: CN
+    ) {
+        cmd("XPENDING")
+            .arg(key)
+            .arg(group)
+            .arg(start)
+            .arg(end)
+            .arg(count)
+            .arg(consumer)
+    }
+
+    /// XRANGE key start end
+    fn xrange<K: ToRedisArgs, S: ToRedisArgs, E: ToRedisArgs>(key: K, start: S, end: E) {
+        cmd("XRANGE").arg(key).arg(start).arg(end)
+    }
+
+    /// XRANGE key - +
+    fn xrange_all<K: ToRedisArgs>(key: K) {
+        cmd("XRANGE").arg(key).arg("-").arg("+")
+    }
+
+    /// XRANGE key start end [COUNT <n>]
+    fn xrange_count<K: ToRedisArgs, S: ToRedisArgs, E: ToRedisArgs, C: ToRedisArgs>(key: K, start: S, end: E, count: C) {
+        cmd("XRANGE").arg(key).arg(start).arg(end).arg("COUNT").arg(count)
+    }
+
+    /// XREAD STREAMS key_1 key_2 ... key_N ID_1 ID_2 ... ID_N
+    fn xread<K: ToRedisArgs, ID: ToRedisArgs>(keys: &[K], ids: &[ID]) {
+        cmd("XREAD").arg("STREAMS").arg(keys).arg(ids)
+    }
+
+    /// XREAD [BLOCK <milliseconds>] [COUNT <count>] STREAMS key_1 key_2 ... key_N
+    ///       ID_1 ID_2 ... ID_N
+    /// XREADGROUP [BLOCK <milliseconds>] [COUNT <count>] [GROUP group-name consumer-name] STREAMS key_1 key_2 ... key_N
+    ///       ID_1 ID_2 ... ID_N
+    fn xread_options<K: ToRedisArgs, ID: ToRedisArgs>(
+        keys: &[K],
+        ids: &[ID],
+        options: StreamReadOptions
+    ) {
+        cmd(if options.read_only() {
+            "XREAD"
+        } else {
+            "XREADGROUP"
+        }).arg(options).arg("STREAMS").arg(keys).arg(ids)
+    }
+
+    /// XREVRANGE key end start
+    fn xrevrange<K: ToRedisArgs, E: ToRedisArgs, S: ToRedisArgs>(key: K, end: E, start: S) {
+        cmd("XREVRANGE").arg(key).arg(end).arg(start)
+    }
+
+    /// XREVRANGE key end start [COUNT <n>]
+    fn xrevrange_count<K: ToRedisArgs, E: ToRedisArgs, S: ToRedisArgs, C: ToRedisArgs>(key: K, end: E, start: S, count: C) {
+        cmd("XREVRANGE").arg(key).arg(end).arg(start).arg("COUNT").arg(count)
+    }
+
+    /// XTRIM <key> MAXLEN [~|=] <count>  (like XADD MAXLEN option)
+    fn xtrim<K: ToRedisArgs>(key: K, maxlen: StreamMaxlen) {
+        cmd("XTRIM").arg(key).arg(maxlen)
     }
 
     // sorted set commands
