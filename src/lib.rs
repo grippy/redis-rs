@@ -415,6 +415,7 @@ pub use types::{
     RedisResult,
     // stream types
     StreamClaimOptions,
+    StreamClaimReply,
     StreamInfoConsumersReply,
     StreamInfoGroupsReply,
     StreamInfoStreamsReply,

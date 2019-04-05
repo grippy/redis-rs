@@ -1297,6 +1297,11 @@ pub struct StreamRangeReply {
 }
 
 #[derive(Default, Debug)]
+pub struct StreamClaimReply {
+    pub ids: Vec<StreamId>,
+}
+
+#[derive(Default, Debug)]
 pub struct StreamPendingReply {
     pub count: usize,
     pub start_id: String,
@@ -1356,6 +1361,12 @@ pub struct StreamPendingId {
 pub struct StreamKey {
     pub key: String,
     pub ids: Vec<StreamId>,
+}
+
+impl StreamKey {
+    pub fn just_ids(&self) -> Vec<&String> {
+        self.ids.iter().map(|msg| &msg.id).collect::<Vec<&String>>()
+    }
 }
 
 #[derive(Default, Debug)]
@@ -1430,6 +1441,22 @@ impl FromRedisValue for StreamRangeReply {
     fn from_redis_value(v: &Value) -> RedisResult<Self> {
         let rows: Vec<HashMap<String, HashMap<String, Value>>> = from_redis_value(v)?;
         let mut reply = StreamRangeReply::default();
+        for row in &rows {
+            let mut i = StreamId::default();
+            for (id, map) in row.iter() {
+                i.id = id.to_owned();
+                i.map = map.to_owned();
+            }
+            reply.ids.push(i);
+        }
+        Ok(reply)
+    }
+}
+
+impl FromRedisValue for StreamClaimReply {
+    fn from_redis_value(v: &Value) -> RedisResult<Self> {
+        let rows: Vec<HashMap<String, HashMap<String, Value>>> = from_redis_value(v)?;
+        let mut reply = StreamClaimReply::default();
         for row in &rows {
             let mut i = StreamId::default();
             for (id, map) in row.iter() {

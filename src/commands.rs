@@ -712,6 +712,11 @@ implement_commands! {
         cmd("XREVRANGE").arg(key).arg(end).arg(start)
     }
 
+    /// XREVRANGE key + -
+    fn xrevrange_all<K: ToRedisArgs>(key: K) {
+        cmd("XREVRANGE").arg(key).arg("+").arg("-")
+    }
+
     /// XREVRANGE key end start [COUNT <n>]
     fn xrevrange_count<K: ToRedisArgs, E: ToRedisArgs, S: ToRedisArgs, C: ToRedisArgs>(key: K, end: E, start: S, count: C) {
         cmd("XREVRANGE").arg(key).arg(end).arg(start).arg("COUNT").arg(count)
